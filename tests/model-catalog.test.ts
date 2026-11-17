@@ -60,3 +60,12 @@ test("maps discovered aliases to stable canonical Pi model ids", () => {
   assert.equal(future.id, "claude-future-1");
   assert.equal(future.cost.input, 0);
 });
+
+test("a restored model keeps the route its discovery chose", () => {
+  // Pi restores cached models without rerunning discovery; the route must ride along
+  // so the first request launches the same route as later ones and the warm process survives.
+  const model = modelFromDiscovery({ value: "opus", resolvedModel: "claude-opus-5-5", displayName: "Opus", description: "" });
+  const restored = JSON.parse(JSON.stringify(model));
+  assert.equal(restored.claudeCodeRoute, "opus");
+  assert.equal(nativeModel(restored.id, restored.claudeCodeRoute), "opus");
+});

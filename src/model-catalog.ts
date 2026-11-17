@@ -4,7 +4,9 @@ import { getBuiltinModels } from "@earendil-works/pi-ai/providers/all";
 export const PROVIDER_ID = "claude-code";
 export const API_ID = "claude-code-stream-json";
 
-export type ClaudeCodeModel = Model<typeof API_ID>;
+// The Claude Code route rides on the model so it survives Pi's model cache:
+// a restored model must launch the same route that a fresh discovery would.
+export type ClaudeCodeModel = Model<typeof API_ID> & { claudeCodeRoute?: string };
 
 export interface DiscoveredClaudeModel {
   value: string;
@@ -147,12 +149,14 @@ export function modelFromDiscovery(info: DiscoveredClaudeModel): ClaudeCodeModel
     // adaptive models are assumed to be newer and therefore unable to disable thinking.
     builtin ? builtin.thinkingLevelMap?.off !== null : info.supportsAdaptiveThinking !== true,
   );
-  return builtin ? fromBuiltin(info, id, builtin) : fallbackModel(info, id);
+  const model = builtin ? fromBuiltin(info, id, builtin) : fallbackModel(info, id);
+  return { ...model, claudeCodeRoute: info.value };
 }
 
 export const CLAUDE_CODE_MODELS: ClaudeCodeModel[] = FALLBACK_DISCOVERY.map(modelFromDiscovery);
 
-export function nativeModel(model: string): string {
+export function nativeModel(model: string, route?: string): string {
+  if (route) return route;
   const direct = NATIVE_ROUTE_BY_ID.get(model);
   if (direct) return direct;
   if (model === "default") return model;
