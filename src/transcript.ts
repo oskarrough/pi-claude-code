@@ -220,6 +220,9 @@ export function prepareFrames(messages: Message[]): NativeFrame[] {
     } else if (message.role === "assistant") {
       role = "assistant";
       blocks = assistantContent(message);
+      // Claude Code drops a turn that is only thinking (a silent end), merging the
+      // user messages around it; drop it here too so both histories line up.
+      if (blocks.every((block) => /thinking$/u.test((block as { type: string }).type))) blocks = [];
       // Claude Code strips signed thinking from replayed turns whose model it can't confirm.
       model = message.responseModel ?? message.model;
     } else {

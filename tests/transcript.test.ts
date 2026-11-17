@@ -70,6 +70,39 @@ test("prepares replay frames and groups tool results", () => {
   assert.equal(frames[2]?.shouldQuery, undefined);
 });
 
+test("drops a silent thinking-only turn so the user messages around it merge as in Claude Code", () => {
+  const call: AssistantMessage = {
+    role: "assistant",
+    api: "test",
+    provider: "claude-code",
+    model: "sonnet",
+    content: [{ type: "toolCall", id: "t1", name: "post", arguments: {} }],
+    usage,
+    stopReason: "toolUse",
+    timestamp: 1,
+  };
+  const silent: AssistantMessage = {
+    ...call,
+    content: [{ type: "thinking", thinking: "waiting for the answer", thinkingSignature: "signed" }],
+    stopReason: "stop",
+  };
+  const frames = prepareFrames([
+    { role: "user", content: "brief a worker", timestamp: 0 },
+    call,
+    { role: "toolResult", toolCallId: "t1", toolName: "post", content: [{ type: "text", text: "posted" }], isError: false, timestamp: 2 },
+    silent,
+    { role: "user", content: "heya", timestamp: 3 },
+  ]);
+  assert.deepEqual(
+    frames.map((frame) => frame.type),
+    ["user", "assistant", "user"],
+  );
+  assert.deepEqual(
+    frames[2]?.message.content.map((block) => (block as { type: string }).type),
+    ["tool_result", "text"],
+  );
+});
+
 test("replays native signed blocks only while the visible projection is unchanged", () => {
   const assistant: AssistantMessage = {
     role: "assistant",
