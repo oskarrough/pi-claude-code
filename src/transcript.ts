@@ -139,9 +139,12 @@ function imageBlock(block: ImageContent): Record<string, unknown> {
 
 function userContent(content: string | (TextContent | ImageContent)[]): unknown[] {
   if (typeof content === "string") return content ? [{ type: "text", text: sanitizeSurrogates(content) }] : [];
-  return content.map((block) =>
-    block.type === "text" ? { type: "text", text: sanitizeSurrogates(block.text) } : imageBlock(block),
-  );
+  // Claude Code drops empty text blocks (an image sent without words), so keep them out here too.
+  return content
+    .filter((block) => block.type !== "text" || block.text)
+    .map((block) =>
+      block.type === "text" ? { type: "text", text: sanitizeSurrogates(block.text) } : imageBlock(block),
+    );
 }
 
 function toolResultContent(message: ToolResultMessage): string | unknown[] {

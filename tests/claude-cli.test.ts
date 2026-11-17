@@ -15,6 +15,7 @@ import {
 } from "../src/claude-cli.ts";
 import type { NativeFrame } from "../src/native-types.ts";
 import { createClaudeCodeProvider } from "../src/provider.ts";
+import { prepareFrames } from "../src/transcript.ts";
 
 type Block = Record<string, unknown>;
 type WireMessage = { role: string; content: unknown };
@@ -801,4 +802,17 @@ test("reports upstream 5xx as retryable and keeps 4xx non-retryable", async () =
   });
   assert.match(invalid.message, /Incomplete Claude Code upstream response \(status 400.*upstream said: bad request/);
   assert.equal(invalid.retryable, false);
+});
+
+test("replays an image sent without words, whose empty text block Claude Code drops", () => {
+  const frames = prepareFrames([
+    { role: "user", content: [{ type: "text", text: "" }, { type: "image", mimeType: "image/png", data: "x" }], timestamp: 0 },
+  ]);
+  const image = { type: "image", source: { type: "base64", media_type: "image/png", data: "x" } };
+  const body = { messages: [{ role: "user", content: [image, text(memory)] }] };
+  const rewritten = JSON.parse(rewriteInitialRequest(Buffer.from(JSON.stringify(body)), frames, undefined).toString("utf8"));
+  assert.deepEqual(
+    rewritten.messages[0].content.map((block: Block) => block.type),
+    ["image"],
+  );
 });
