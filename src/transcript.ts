@@ -186,7 +186,16 @@ function canonicalAssistantContent(message: AssistantMessage): NativeContentBloc
   return blocks;
 }
 
+/**
+ * The assistant blocks Claude Code replays. A turn with nothing but thinking (a
+ * silent end) is dropped by Claude Code, so it replays as nothing here too.
+ */
 function assistantContent(message: AssistantMessage): NativeContentBlock[] {
+  const blocks = signedAssistantContent(message);
+  return blocks.every((block) => /thinking$/u.test(block.type)) ? [] : blocks;
+}
+
+function signedAssistantContent(message: AssistantMessage): NativeContentBlock[] {
   const carrier = replayCarrier(message);
   if (carrier && projectionsEqual(assistantProjection(message), carrier.projection)) {
     return clone(carrier.message.content);
@@ -220,9 +229,6 @@ export function prepareFrames(messages: Message[]): NativeFrame[] {
     } else if (message.role === "assistant") {
       role = "assistant";
       blocks = assistantContent(message);
-      // Claude Code drops a turn that is only thinking (a silent end), merging the
-      // user messages around it; drop it here too so both histories line up.
-      if (blocks.every((block) => /thinking$/u.test((block as { type: string }).type))) blocks = [];
       // Claude Code strips signed thinking from replayed turns whose model it can't confirm.
       model = message.responseModel ?? message.model;
     } else {

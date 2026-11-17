@@ -197,6 +197,25 @@ test("builds cache-stable native tool declarations and chronological system chan
     { type: "tool_removal", tool: { type: "tool_reference", name: `${TOOL_PREFIX}alpha` } },
   ]);
 
+  // A silent thinking-only turn is no boundary: Claude Code never sees it.
+  const silent: AssistantMessage = {
+    ...assistant,
+    content: [{ type: "thinking", thinking: "waiting", thinkingSignature: "signed" }],
+  };
+  const afterSilence = prepareNativeTranscript(
+    [
+      messages[0]!,
+      { role: "user", content: "first", timestamp: 1 },
+      silent,
+      { role: "system", content: "beta is available", toolsAdded: [beta], timestamp: 2 },
+      { role: "user", content: "second", timestamp: 3 },
+      assistant,
+      { role: "user", content: "third", timestamp: 5 },
+    ],
+    true,
+  )!;
+  assert.equal(afterSilence.systemInjections[0]?.beforeAssistant, 0);
+
   assert.equal(prepareNativeTranscript(messages, false), undefined);
   assert.equal(
     prepareNativeTranscript(
