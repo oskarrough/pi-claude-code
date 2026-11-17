@@ -920,7 +920,8 @@ function frameHistoryHash(frames: NativeFrame[]): string {
   return digest(
     frames.map((frame) => ({
       type: frame.type,
-      message: frame.message,
+      // Only role and content: the replay-only model tag must not break continuation.
+      message: { role: frame.message.role, content: frame.message.content },
     })),
   );
 }
