@@ -713,6 +713,9 @@ function setReplayCacheBreakpoints(messages: NativeRequestMessage[]): void {
   const userIndexes = messages
     .map((message, index) => (message.role === "user" ? index : -1))
     .filter((index) => index >= 0);
+  // Only the two breakpoints set below belong in messages; Claude Code's own
+  // marker on its newest message would otherwise survive as a fifth.
+  for (const message of messages) message.content = withoutCacheControl(message.content);
   if (userIndexes.length >= 3) {
     // Claude permits four cache breakpoints. Its two system-prompt markers
     // consume half of them, so once a prior queried user exists, move the
